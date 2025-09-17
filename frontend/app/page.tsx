@@ -33,7 +33,7 @@ export default function Home() {
       setData(result.data || []);
       if (result.data && result.data.length > 0) {
         setShowSuccess(true);
-        setTimeout(() => setShowSuccess(false), 7000); // hide after 3s
+        setTimeout(() => setShowSuccess(false), 7000);
       }
     } catch (err) {
       console.error("Error scraping:", err);
@@ -43,6 +43,38 @@ export default function Home() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleReset = () => {
+    setUrl("");
+    setPages(1);
+    setData([]);
+    setError("");
+    setShowSuccess(false);
+  };
+
+  const handleDownloadCSV = () => {
+    if (!data.length) return;
+
+    const headers = ["URL", "Title", "Date", "Summary"];
+    const rows = data.map((row) => [
+      row.url,
+      row.title || "-",
+      row.date || "-",
+      row.summary || "-",
+    ]);
+
+    const csvContent = [headers, ...rows]
+      .map((e) => e.map((v) => `"${String(v).replace(/"/g, '""')}"`).join(","))
+      .join("\n");
+
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const link = document.createElement("a");
+    link.href = URL.createObjectURL(blob);
+    link.setAttribute("download", "scraped_data.csv");
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
   };
 
   return (
@@ -84,7 +116,7 @@ export default function Home() {
             className="w-24 bg-transparent text-white placeholder-gray-400 rounded-xl px-4 py-3 border border-white/20"
           />
 
-          {/* Button */}
+          {/* Scrape Button */}
           <motion.div
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
@@ -102,9 +134,44 @@ export default function Home() {
               <span className="absolute inset-0 bg-white/20 opacity-0 group-hover:opacity-100 transition duration-500 blur-xl"></span>
             </Button>
           </motion.div>
+
+          {/* Download Button (only if data exists) */}
+          {/* Download Button (only if data exists) */}
+          {data.length > 0 && (
+            <motion.div
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+              transition={{ type: "spring", stiffness: 200 }}
+              className="relative"
+            >
+              <Button
+                onClick={handleDownloadCSV}
+                className="bg-gradient-to-r from-purple-500 to-pink-500 text-white font-semibold px-6 py-6 rounded-xl shadow-lg overflow-hidden group cursor-pointer"
+              >
+                <span className="relative z-10">Download CSV</span>
+                <span className="absolute inset-0 bg-white/20 opacity-0 group-hover:opacity-100 transition duration-500 blur-xl"></span>
+              </Button>
+            </motion.div>
+          )}
+          {data.length > 0 && (
+            <motion.div
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+              transition={{ type: "spring", stiffness: 200 }}
+              className="absolute -right-35"
+            >
+              <Button
+                onClick={handleReset}
+                className="bg-gradient-to-r from-red-600 to-red-400 text-white font-semibold px-6 py-6 rounded-xl shadow-lg overflow-hidden group cursor-pointer"
+              >
+                <span className="relative z-10">🔄 Reset</span>
+                <span className="absolute inset-0 bg-white/20 opacity-0 group-hover:opacity-100 transition duration-500 blur-xl"></span>
+              </Button>
+            </motion.div>
+          )}
         </div>
       </motion.div>
-
+          
       {/* Loading Animation */}
       {loading && (
         <motion.div
@@ -184,7 +251,9 @@ export default function Home() {
                       </td>
                       <td className="px-4 py-3 break-words max-w-[500px] text-gray-300">
                         {row.summary && row.summary.trim() !== ""
-                          ? row.summary
+                          ? row.summary.length > 150
+                            ? row.summary.slice(0, 150) + "..."
+                            : row.summary
                           : "-"}
                       </td>
                     </tr>
